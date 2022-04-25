@@ -1,0 +1,9 @@
+stages:
+  - unit
+
+
+unit:
+  stage: unit
+  image: registry.gitlab.com/crypto_project/defi/infra/rust-solana:latest
+  script:
+    - cargo test
