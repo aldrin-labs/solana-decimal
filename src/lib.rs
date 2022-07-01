@@ -25,6 +25,8 @@ pub mod consts {
     pub const HALF_WAD: u64 = WAD / 2;
 
     pub const PERCENT_SCALER: u64 = 10_000_000_000_000_000;
+
+    pub const PERMILLION_SCALER: u64 = 1_000_000_000_000;
 }
 
 #[error_code]
@@ -88,9 +90,17 @@ impl Decimal {
         U192::from(consts::HALF_WAD)
     }
 
-    /// Create scaled decimal from percent value
+    /// Create scaled decimal from a percent value
     pub fn from_percent(percent: impl Into<u64>) -> Self {
         Self(U192::from(percent.into() * consts::PERCENT_SCALER))
+    }
+
+    /// Create scaled decimal from a permillion value
+    ///
+    /// * 10_000 pm = 1%
+    /// * 1_000_000 pm = 100%
+    pub fn from_permillion(permillion: impl Into<u64>) -> Self {
+        Self(U192::from(permillion.into() * consts::PERMILLION_SCALER))
     }
 
     /// Return raw scaled value if it fits within u128
@@ -314,5 +324,21 @@ mod test {
             .unwrap();
         assert_eq!(dec.to_string(), "0.900000000000000000");
         assert_eq!(Decimal::from_percent(90u64), dec);
+    }
+
+    #[test]
+    fn it_represents_permillion() {
+        assert_eq!(
+            Decimal::from_percent(1u64),
+            Decimal::from_permillion(10_000u64)
+        );
+        assert_eq!(
+            Decimal::from_percent(100u64),
+            Decimal::from_permillion(1_000_000u64)
+        );
+        assert_eq!(
+            Decimal::from_percent(90u64),
+            Decimal::from_permillion(900_000u64)
+        );
     }
 }
