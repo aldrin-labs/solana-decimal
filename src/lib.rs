@@ -278,6 +278,8 @@ impl TryPow<u64> for Decimal {
 
 impl TrySqrt for Decimal {
     /// Approximate the square root using Newton's method.
+    ///
+    /// Based on https://docs.rs/spl-math/0.1.0/spl_math/precise_number/struct.PreciseNumber.html#method.sqrt
     fn try_sqrt(self) -> Result<Self> {
         let two = Self::from(2u64);
         let one = Self::from(1u64);
@@ -285,7 +287,6 @@ impl TrySqrt for Decimal {
         // input number.  For all numbers, that will be between 1 and the given
         // number.
         let guess = self.try_add(one)?.try_div(two)?;
-        println!("into newtonian_root_approximation");
         newtonian_root_approximation(
             self,
             two,
@@ -299,6 +300,8 @@ impl TrySqrt for Decimal {
 /// https://en.wikipedia.org/wiki/Newton%27s_method
 /// NOTE: this function is private because its accurate range and precision
 /// have not been established.
+///
+/// Based on https://docs.rs/spl-math/0.1.0/spl_math/precise_number/struct.PreciseNumber.html#method.sqrt
 fn newtonian_root_approximation(
     base: Decimal,
     root: Decimal,
