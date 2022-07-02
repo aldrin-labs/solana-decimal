@@ -22,11 +22,15 @@ pub mod consts {
     /// Identity
     pub const WAD: u64 = 1_000_000_000_000_000_000;
 
+    pub const TWO_WADS: u64 = WAD * 2;
+
     pub const HALF_WAD: u64 = WAD / 2;
 
     pub const PERCENT_SCALER: u64 = 10_000_000_000_000_000;
 
     pub const PERMILLION_SCALER: u64 = 1_000_000_000_000;
+
+    pub const MAX_APPROXIMATION_ITERATIONS: u128 = 100;
 }
 
 #[error_code]
@@ -49,6 +53,11 @@ pub trait TryDiv<RHS>: Sized {
 
 pub trait TryMul<RHS>: Sized {
     fn try_mul(self, rhs: RHS) -> Result<Self>;
+}
+
+pub trait TrySqrt: Sized {
+    /// sqrt(self)
+    fn try_sqrt(self) -> Result<Self>;
 }
 
 pub trait TryPow<RHS>: Sized {
@@ -74,6 +83,10 @@ pub struct Decimal(pub U192);
 impl Decimal {
     pub fn one() -> Self {
         Self(Self::wad())
+    }
+
+    pub fn two() -> Self {
+        Self(U192::from(consts::TWO_WADS))
     }
 
     pub fn zero() -> Self {
@@ -139,6 +152,20 @@ impl Decimal {
             .checked_div(Self::wad())
             .ok_or(ErrorCode::MathOverflow)?;
         Ok(u64::try_from(ceil_val).map_err(|_| ErrorCode::MathOverflow)?)
+    }
+
+    /// The precision is 15 decimal places
+    pub fn almost_eq(&self, other: &Self) -> bool {
+        let precision = Self::from_scaled_val(1000);
+        match self.cmp(&other) {
+            std::cmp::Ordering::Equal => true,
+            std::cmp::Ordering::Less => {
+                other.try_sub(*self).unwrap() < precision
+            }
+            std::cmp::Ordering::Greater => {
+                self.try_sub(*other).unwrap() < precision
+            }
+        }
     }
 }
 
@@ -249,6 +276,65 @@ impl TryPow<u64> for Decimal {
     }
 }
 
+impl TrySqrt for Decimal {
+    /// Approximate the square root using Newton's method.
+    fn try_sqrt(self) -> Result<Self> {
+        let two = Self::from(2u64);
+        let one = Self::from(1u64);
+        // A good initial guess is the average of the interval that contains the
+        // input number.  For all numbers, that will be between 1 and the given
+        // number.
+        let guess = self.try_add(one)?.try_div(two)?;
+        println!("into newtonian_root_approximation");
+        newtonian_root_approximation(
+            self,
+            two,
+            guess,
+            consts::MAX_APPROXIMATION_ITERATIONS,
+        )
+    }
+}
+
+/// Approximate the nth root of a number using Newton's method
+/// https://en.wikipedia.org/wiki/Newton%27s_method
+/// NOTE: this function is private because its accurate range and precision
+/// have not been established.
+fn newtonian_root_approximation(
+    base: Decimal,
+    root: Decimal,
+    mut guess: Decimal,
+    iterations: u128,
+) -> Result<Decimal> {
+    let zero = Decimal::zero();
+    if base == zero {
+        return Ok(zero);
+    }
+    if root == zero {
+        return Err(error!(ErrorCode::MathOverflow));
+    }
+    let one = Decimal::from(1u64);
+    let root_minus_one = root.try_sub(one)?;
+    let root_minus_one_whole = root_minus_one.try_round_u64()?;
+    let mut last_guess = guess;
+    for _ in 0..iterations {
+        // x_k+1 = ((n - 1) * x_k + A / (x_k ^ (n - 1))) / n
+        let first_term = root_minus_one.try_mul(guess)?;
+        let power = guess.try_pow(root_minus_one_whole as u64);
+        let second_term = match power {
+            Ok(num) => base.try_div(num)?,
+            Err(_) => Decimal::zero(),
+        };
+        guess = first_term.try_add(second_term)?.try_div(root)?;
+        if last_guess.almost_eq(&guess) {
+            break;
+        } else {
+            last_guess = guess;
+        }
+    }
+
+    Ok(guess)
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -340,5 +426,26 @@ mod test {
             Decimal::from_percent(90u64),
             Decimal::from_permillion(900_000u64)
         );
+    }
+
+    #[test]
+    fn it_sqrts() -> Result<()> {
+        assert_eq!(Decimal::zero().try_sqrt()?, Decimal::zero());
+        assert_eq!(Decimal::from(1u64).try_sqrt()?, Decimal::from(1u64));
+        assert_eq!(Decimal::from(4u64).try_sqrt()?, Decimal::from(2u64));
+        assert_eq!(
+            &Decimal::from(19945u64).try_sqrt()?.to_string(),
+            "141.226768000970694167"
+        );
+        assert_eq!(
+            &Decimal::from(19945u64).try_sqrt()?.try_sqrt()?.to_string(),
+            "11.883886906268112671"
+        );
+        assert_eq!(
+            &Decimal::from(2u64).try_sqrt()?.to_string(),
+            "1.414213562373095048"
+        );
+
+        Ok(())
     }
 }
