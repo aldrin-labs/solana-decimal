@@ -14,6 +14,22 @@
 
 use super::*;
 
+pub mod consts {
+    /// Scale of precision.
+    pub const SCALE: usize = 18;
+
+    /// Identity
+    pub const WAD: u64 = 1_000_000_000_000_000_000;
+
+    pub const TWO_WADS: u64 = WAD * 2;
+
+    pub const HALF_WAD: u64 = WAD / 2;
+
+    pub const PERCENT_SCALER: u64 = 10_000_000_000_000_000;
+
+    pub const PERMILLION_SCALER: u64 = 1_000_000_000_000;
+}
+
 /// Large decimal values, precise to 18 digits
 #[derive(Clone, Copy, Debug, Default, PartialEq, PartialOrd, Eq, Ord)]
 pub struct Decimal(pub U192);

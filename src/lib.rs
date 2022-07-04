@@ -6,22 +6,6 @@ use std::{convert::TryFrom, fmt};
 pub use u192_decimal::Decimal;
 pub use u320_decimal::LargeDecimal;
 
-pub mod consts {
-    /// Scale of precision.
-    pub const SCALE: usize = 18;
-
-    /// Identity
-    pub const WAD: u64 = 1_000_000_000_000_000_000;
-
-    pub const TWO_WADS: u64 = WAD * 2;
-
-    pub const HALF_WAD: u64 = WAD / 2;
-
-    pub const PERCENT_SCALER: u64 = 10_000_000_000_000_000;
-
-    pub const PERMILLION_SCALER: u64 = 1_000_000_000_000;
-}
-
 mod custom_u192 {
     use uint::construct_uint;
 

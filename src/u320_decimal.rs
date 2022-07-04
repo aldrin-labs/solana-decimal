@@ -1,8 +1,8 @@
 //! Math for preserving precision of token amounts which are limited
 //! by the SPL Token program to be at most u64::MAX.
 //!
-//! Decimals are internally scaled by an WAD (10^18) to preserve
-//! precision up to 18 decimal places. Decimals are sized to support
+//! Decimals are internally scaled by an identity (10^6) to preserve
+//! precision up to 6 decimal places. Decimals are sized to support
 //! both serialization and precise math for the full range of
 //! unsigned 64-bit integers. The underlying representation is a u320. This
 //! enables arithmetic ops at the high range of u64.
@@ -14,6 +14,18 @@
 use super::*;
 use std::convert::TryFrom;
 
+pub mod consts {
+    /// Scale of precision.
+    pub const SCALE: usize = 6;
+
+    /// Identity
+    pub const IDENTITY: u64 = 1_000_000;
+
+    pub const TWO_IDENTITIES: u64 = IDENTITY * 2;
+
+    pub const HALF_IDENTITY: u64 = IDENTITY / 2;
+}
+
 /// Large decimal values, precise to 6 digits
 #[derive(Clone, Debug, Default, PartialEq, PartialOrd, Eq, Ord)]
 pub struct LargeDecimal(pub U320);
@@ -24,7 +36,7 @@ impl LargeDecimal {
     }
 
     pub fn two() -> Self {
-        Self(U320::from(consts::TWO_WADS))
+        Self(U320::from(consts::TWO_IDENTITIES))
     }
 
     pub fn zero() -> Self {
@@ -33,12 +45,12 @@ impl LargeDecimal {
 
     // OPTIMIZE: use const slice when fixed in BPF toolchain
     fn identity() -> U320 {
-        U320::from(consts::WAD)
+        U320::from(consts::IDENTITY)
     }
 
     // OPTIMIZE: use const slice when fixed in BPF toolchain
     fn half_identity() -> U320 {
-        U320::from(consts::HALF_WAD)
+        U320::from(consts::HALF_IDENTITY)
     }
 
     /// Return raw scaled value if it fits within u128
@@ -267,7 +279,12 @@ impl TryFrom<LargeDecimal> for Decimal {
     type Error = Error;
 
     fn try_from(ld: LargeDecimal) -> Result<Self> {
-        let [decimal, lowest, mid, overflow1, overflow2] = ld.0 .0;
+        // we make the [`LargeDecimal`] precision to be same as the [`Decimal`]
+        debug_assert!(u192_decimal::consts::WAD > consts::IDENTITY);
+        let ld = ld.try_mul(u192_decimal::consts::WAD / consts::IDENTITY)?;
+        let LargeDecimal(u320) = ld;
+        let U320(words) = u320;
+        let [decimal, lowest, mid, overflow1, overflow2] = words;
 
         if overflow1 != 0 || overflow2 != 0 {
             // the large decimal does not fit the u192
@@ -309,14 +326,11 @@ mod test {
         let b = LargeDecimal::from(1000000007436580456u128);
 
         assert_eq!(
-            "408000006415494734520829188856568457112.000000000000000000",
+            "408000006415494734520829188856568457112.000000",
             &a.try_mul(b.clone()).unwrap().to_string()
         );
-        assert_eq!(
-            "408.000000347245054696",
-            &a.try_div(b.clone()).unwrap().to_string()
-        );
-        assert_eq!("0.002450980390070855", &b.try_div(a).unwrap().to_string());
+        assert_eq!("408.000000", &a.try_div(b.clone()).unwrap().to_string());
+        assert_eq!("0.002450", &b.try_div(a).unwrap().to_string());
     }
 
     #[test]
