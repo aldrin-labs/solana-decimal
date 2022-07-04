@@ -247,12 +247,15 @@ impl TryPow<u64> for LargeDecimal {
             Self::one()
         };
 
-        while exp > 0 {
+        loop {
             exp /= 2;
-            base = base.try_mul(base.clone())?;
+            if exp == 0 {
+                break;
+            }
+            base = base.try_mul(&base)?;
 
             if exp % 2 != 0 {
-                ret = ret.try_mul(base.clone())?;
+                ret = ret.try_mul(&base)?;
             }
         }
 
@@ -309,6 +312,40 @@ mod test {
         assert_eq!(
             LargeDecimal::one(),
             LargeDecimal::one().try_pow(u64::MAX).unwrap()
+        );
+
+        assert_eq!(
+            LargeDecimal::two(),
+            LargeDecimal::two().try_pow(1u64).unwrap()
+        );
+
+        assert_eq!(
+            LargeDecimal::from(4u64),
+            LargeDecimal::two().try_pow(2u64).unwrap()
+        );
+
+        assert_eq!(
+            LargeDecimal::from(27_000_000u64),
+            LargeDecimal::from(300u64).try_pow(3u64).unwrap()
+        );
+    }
+
+    #[test]
+    fn test_pow_large_numbers() {
+        assert_eq!(
+            LargeDecimal::from(10u128.pow(3 * 11)),
+            LargeDecimal::from(100_000_000_000u64)
+                .try_pow(3u64)
+                .unwrap()
+        );
+
+        assert_eq!(
+            LargeDecimal::from(10u128.pow(2 * 11))
+                .try_mul(LargeDecimal::from(10u128.pow(2 * 11)))
+                .unwrap(),
+            LargeDecimal::from(100_000_000_000u64)
+                .try_pow(4u64)
+                .unwrap()
         );
     }
 
