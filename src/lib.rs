@@ -1,3 +1,7 @@
+#![allow(clippy::assign_op_pattern)]
+#![allow(clippy::ptr_offset_with_cast)]
+#![allow(clippy::manual_range_contains)]
+
 pub mod u192_decimal;
 pub mod u320_decimal;
 
@@ -57,6 +61,33 @@ pub trait TryPow<RHS>: Sized {
     fn try_pow(&self, rhs: RHS) -> Result<Self>;
 }
 
+impl<T: TryMul<T> + From<u64> + Clone> TryPow<u64> for T {
+    /// Calculates base^exp
+    fn try_pow(&self, mut exp: u64) -> Result<Self> {
+        let mut base = self.clone();
+        let mut ret = if exp % 2 != 0 {
+            base.clone()
+        } else {
+            Self::from(1)
+        };
+
+        loop {
+            exp /= 2;
+            if exp == 0 {
+                break;
+            }
+
+            base = base.try_mul(base.clone())?;
+
+            if exp % 2 != 0 {
+                ret = ret.try_mul(base.clone())?;
+            }
+        }
+
+        Ok(ret)
+    }
+}
+
 pub trait AlmostEq {
     fn almost_eq(&self, other: &Self) -> bool;
 }
@@ -99,7 +130,7 @@ fn newtonian_root_approximation<
         return Err(error!(DecimalError::MathOverflow));
     }
     let one = T::from(1u64);
-    let root_minus_one = root.clone().try_sub(one)?;
+    let root_minus_one = root.try_sub(one)?;
     let root_minus_one_whole = root_minus_one.try_round()?;
     let mut last_guess = guess.clone();
     for _ in 0..MAX_APPROXIMATION_ITERATIONS {

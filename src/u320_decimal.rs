@@ -7,10 +7,6 @@
 //! unsigned 64-bit integers. The underlying representation is a u320. This
 //! enables arithmetic ops at the high range of u64.
 
-#![allow(clippy::assign_op_pattern)]
-#![allow(clippy::ptr_offset_with_cast)]
-#![allow(clippy::manual_range_contains)]
-
 use super::*;
 use std::convert::TryFrom;
 
@@ -99,7 +95,7 @@ impl AlmostEq for LargeDecimal {
     /// The precision is 15 decimal places
     fn almost_eq(&self, other: &Self) -> bool {
         let precision = Self::from_scaled_val(1000);
-        match self.cmp(&other) {
+        match self.cmp(other) {
             std::cmp::Ordering::Equal => true,
             std::cmp::Ordering::Less => {
                 other.try_sub(self.clone()).unwrap() < precision
@@ -234,32 +230,6 @@ impl TryMul<&LargeDecimal> for LargeDecimal {
 impl TryMul<LargeDecimal> for LargeDecimal {
     fn try_mul(&self, rhs: Self) -> Result<Self> {
         self.try_mul(&rhs)
-    }
-}
-
-impl TryPow<u64> for LargeDecimal {
-    /// Calculates base^exp
-    fn try_pow(&self, mut exp: u64) -> Result<Self> {
-        let mut base = self.clone();
-        let mut ret = if exp % 2 != 0 {
-            base.clone()
-        } else {
-            Self::one()
-        };
-
-        loop {
-            exp /= 2;
-            if exp == 0 {
-                break;
-            }
-            base = base.try_mul(&base)?;
-
-            if exp % 2 != 0 {
-                ret = ret.try_mul(&base)?;
-            }
-        }
-
-        Ok(ret)
     }
 }
 

@@ -8,10 +8,6 @@
 //! u192 rather than u320 to reduce compute cost while losing
 //! support for arithmetic operations at the high end of u64 range.
 
-#![allow(clippy::assign_op_pattern)]
-#![allow(clippy::ptr_offset_with_cast)]
-#![allow(clippy::manual_range_contains)]
-
 use super::*;
 
 pub mod consts {
@@ -116,7 +112,7 @@ impl AlmostEq for Decimal {
     /// The precision is 15 decimal places
     fn almost_eq(&self, other: &Self) -> bool {
         let precision = Self::from_scaled_val(1000);
-        match self.cmp(&other) {
+        match self.cmp(other) {
             std::cmp::Ordering::Equal => true,
             std::cmp::Ordering::Less => {
                 other.try_sub(*self).unwrap() < precision
@@ -230,25 +226,6 @@ impl TryMul<Decimal> for Decimal {
     }
 }
 
-impl TryPow<u64> for Decimal {
-    /// Calculates base^exp
-    fn try_pow(&self, mut exp: u64) -> Result<Self> {
-        let mut base = self.clone();
-        let mut ret = if exp % 2 != 0 { base } else { Self::one() };
-
-        while exp > 0 {
-            exp /= 2;
-            base = base.try_mul(base.clone())?;
-
-            if exp % 2 != 0 {
-                ret = ret.try_mul(base)?;
-            }
-        }
-
-        Ok(ret)
-    }
-}
-
 impl TrySqrt for Decimal {
     /// Approximate the square root using Newton's method.
     ///
@@ -260,7 +237,7 @@ impl TrySqrt for Decimal {
         // input number.  For all numbers, that will be between 1 and the given
         // number.
         let guess = self.try_add(one)?.try_div(two)?;
-        newtonian_root_approximation(self.clone(), two, guess)
+        newtonian_root_approximation(*self, two, guess)
     }
 }
 
