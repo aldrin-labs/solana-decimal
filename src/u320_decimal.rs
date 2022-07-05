@@ -8,7 +8,6 @@
 //! enables arithmetic ops at the high range of u64.
 
 use super::*;
-use std::convert::TryFrom;
 
 pub mod consts {
     /// Scale of precision.
@@ -248,23 +247,20 @@ impl TrySqrt for LargeDecimal {
     }
 }
 
-impl TryFrom<LargeDecimal> for Decimal {
+impl TryFrom<Decimal> for LargeDecimal {
     type Error = Error;
 
-    fn try_from(ld: LargeDecimal) -> Result<Self> {
-        // we make the [`LargeDecimal`] precision to be same as the [`Decimal`]
+    /// # Important
+    /// This conversion loses precision because [`Self`] has less decimal
+    /// places than [`Decimal`]
+    fn try_from(d: Decimal) -> Result<Self> {
         debug_assert!(u192_decimal::consts::WAD > consts::IDENTITY);
-        let ld = ld.try_mul(u192_decimal::consts::WAD / consts::IDENTITY)?;
-        let LargeDecimal(u320) = ld;
-        let U320(words) = u320;
-        let [decimal, lowest, mid, overflow1, overflow2] = words;
+        let d = d.try_div(u192_decimal::consts::WAD / consts::IDENTITY)?;
+        let Decimal(u192) = d;
+        let U192(words) = u192;
+        let [a, b, c] = words;
 
-        if overflow1 != 0 || overflow2 != 0 {
-            // the large decimal does not fit the u192
-            return Err(error!(DecimalError::MathOverflow));
-        }
-
-        Ok(Self(U192([decimal, lowest, mid])))
+        Ok(Self(U320([a, b, c, 0, 0])))
     }
 }
 
@@ -368,17 +364,21 @@ mod test {
     }
 
     #[test]
-    fn it_converts_large_decimal_to_precise_decimal() -> Result<()> {
-        assert_eq!(Decimal::from(4u64), LargeDecimal::from(4u64).try_into()?);
+    fn it_converts_precise_decimal_to_large_decimal() -> Result<()> {
+        assert_eq!(LargeDecimal::from(4u64), Decimal::from(4u64).try_into()?);
         assert_eq!(
-            Decimal::from(1000000u64),
-            LargeDecimal::from(1000000u64).try_into()?
+            LargeDecimal::from(1000000u64),
+            Decimal::from(1000000u64).try_into()?,
         );
         assert_eq!(
-            Decimal::one().try_div(Decimal::from(100u64))?,
-            LargeDecimal::one()
-                .try_div(LargeDecimal::from(100u64))?
-                .try_into()?
+            LargeDecimal::one().try_div(LargeDecimal::from(100u64))?,
+            Decimal::one().try_div(Decimal::from(100u64))?.try_into()?,
+        );
+        assert_eq!(
+            // 1.123456
+            LargeDecimal::from_scaled_val(1_123456),
+            // 1.123456111111111111
+            Decimal::from_scaled_val(1_123456_111111111111).try_into()?,
         );
 
         Ok(())

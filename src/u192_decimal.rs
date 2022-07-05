@@ -9,6 +9,7 @@
 //! support for arithmetic operations at the high end of u64 range.
 
 use super::*;
+use std::convert::TryFrom;
 
 pub mod consts {
     /// Scale of precision.
@@ -241,6 +242,26 @@ impl TrySqrt for Decimal {
     }
 }
 
+impl TryFrom<LargeDecimal> for Decimal {
+    type Error = Error;
+
+    fn try_from(ld: LargeDecimal) -> Result<Self> {
+        // we make the [`LargeDecimal`] precision to be same as the [`Decimal`]
+        debug_assert!(consts::WAD > u320_decimal::consts::IDENTITY);
+        let ld = ld.try_mul(consts::WAD / u320_decimal::consts::IDENTITY)?;
+        let LargeDecimal(u320) = ld;
+        let U320(words) = u320;
+        let [decimal, lowest, mid, overflow1, overflow2] = words;
+
+        if overflow1 != 0 || overflow2 != 0 {
+            // the large decimal does not fit the u192
+            return Err(error!(DecimalError::MathOverflow));
+        }
+
+        Ok(Self(U192([decimal, lowest, mid])))
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -366,6 +387,23 @@ mod test {
         assert_eq!(
             &Decimal::from(2u64).try_sqrt()?.to_string(),
             "1.414213562373095048"
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn it_converts_large_decimal_to_precise_decimal() -> Result<()> {
+        assert_eq!(Decimal::from(4u64), LargeDecimal::from(4u64).try_into()?);
+        assert_eq!(
+            Decimal::from(1000000u64),
+            LargeDecimal::from(1000000u64).try_into()?
+        );
+        assert_eq!(
+            Decimal::one().try_div(Decimal::from(100u64))?,
+            LargeDecimal::one()
+                .try_div(LargeDecimal::from(100u64))?
+                .try_into()?
         );
 
         Ok(())
