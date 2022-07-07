@@ -194,13 +194,28 @@ impl TryDiv<LargeDecimal> for LargeDecimal {
 
 impl TryDiv<&LargeDecimal> for LargeDecimal {
     fn try_div(&self, rhs: &Self) -> Result<Self> {
-        Ok(Self(
-            self.0
-                .checked_mul(Self::identity())
-                .ok_or(DecimalError::MathOverflow)?
-                .checked_div(rhs.0)
-                .ok_or(DecimalError::MathOverflow)?,
-        ))
+        match self.0.checked_mul(Self::identity()) {
+            Some(v) => Ok(Self(
+                v.checked_div(rhs.0).ok_or(DecimalError::MathOverflow)?,
+            )),
+            None => {
+                let u192 = if self.0 >= rhs.0 {
+                    self.0
+                        .checked_div(rhs.0)
+                        .and_then(|v| v.checked_mul(Self::identity()))
+                } else {
+                    rhs.0
+                        .checked_div(self.0)
+                        .and_then(|v| v.checked_mul(Self::identity()))
+                };
+
+                if let Some(u192) = u192 {
+                    Ok(Self(u192))
+                } else {
+                    Err(error!(DecimalError::MathOverflow))
+                }
+            }
+        }
     }
 }
 
@@ -216,13 +231,29 @@ impl TryMul<u64> for LargeDecimal {
 
 impl TryMul<&LargeDecimal> for LargeDecimal {
     fn try_mul(&self, rhs: &Self) -> Result<Self> {
-        Ok(Self(
-            self.0
-                .checked_mul(rhs.0)
-                .ok_or(DecimalError::MathOverflow)?
-                .checked_div(Self::identity())
-                .ok_or(DecimalError::MathOverflow)?,
-        ))
+        match self.0.checked_mul(rhs.0) {
+            Some(v) => Ok(Self(
+                v.checked_div(Self::identity())
+                    .ok_or(DecimalError::MathOverflow)?,
+            )),
+            None => {
+                let inner = if self.0 >= rhs.0 {
+                    self.0
+                        .checked_div(Self::identity())
+                        .and_then(|v| v.checked_mul(rhs.0))
+                } else {
+                    rhs.0
+                        .checked_div(Self::identity())
+                        .and_then(|v| v.checked_mul(self.0))
+                };
+
+                if let Some(inner) = inner {
+                    Ok(Self(inner))
+                } else {
+                    Err(error!(DecimalError::MathOverflow))
+                }
+            }
+        }
     }
 }
 
