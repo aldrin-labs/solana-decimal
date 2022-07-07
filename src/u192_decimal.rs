@@ -217,13 +217,29 @@ impl TryMul<u64> for Decimal {
 
 impl TryMul<Decimal> for Decimal {
     fn try_mul(&self, rhs: Self) -> Result<Self> {
-        Ok(Self(
-            self.0
-                .checked_mul(rhs.0)
-                .ok_or(DecimalError::MathOverflow)?
-                .checked_div(Self::wad())
-                .ok_or(DecimalError::MathOverflow)?,
-        ))
+        match self.0.checked_mul(rhs.0) {
+            Some(v) => Ok(Self(
+                v.checked_div(Self::wad())
+                    .ok_or(DecimalError::MathOverflow)?,
+            )),
+            None => {
+                let u192 = if self.0 >= rhs.0 {
+                    self.0
+                        .checked_div(Self::wad())
+                        .and_then(|v| v.checked_mul(rhs.0))
+                } else {
+                    rhs.0
+                        .checked_div(Self::wad())
+                        .and_then(|v| v.checked_mul(self.0))
+                };
+
+                if let Some(u192) = u192 {
+                    Ok(Self(u192))
+                } else {
+                    Err(error!(DecimalError::MathOverflow))
+                }
+            }
+        }
     }
 }
 
@@ -308,6 +324,19 @@ mod test {
 
         assert_eq!(
             Decimal(408000006415494734520u128.into()),
+            a.try_mul(b).unwrap()
+        );
+    }
+
+    #[test]
+    fn it_multiplies_large_numbers() {
+        let a = Decimal::from(10_000_000_000_000_000_000_u64);
+        let b = Decimal::from(10_000_000_000_000_000_000_u64);
+
+        assert_eq!(
+            Decimal::from(
+                100_000_000_000_000_000_000_000_000_000_000_000_000_u128
+            ),
             a.try_mul(b).unwrap()
         );
     }
