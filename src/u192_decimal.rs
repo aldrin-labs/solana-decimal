@@ -195,13 +195,28 @@ impl TryDiv<u128> for Decimal {
 
 impl TryDiv<Decimal> for Decimal {
     fn try_div(&self, rhs: Self) -> Result<Self> {
-        Ok(Self(
-            self.0
-                .checked_mul(Self::wad())
-                .ok_or(DecimalError::MathOverflow)?
-                .checked_div(rhs.0)
-                .ok_or(DecimalError::MathOverflow)?,
-        ))
+        match self.0.checked_mul(Self::wad()) {
+            Some(v) => Ok(Self(
+                v.checked_div(rhs.0).ok_or(DecimalError::MathOverflow)?,
+            )),
+            None => {
+                let u192 = if self.0 >= rhs.0 {
+                    self.0
+                        .checked_div(rhs.0)
+                        .and_then(|v| v.checked_mul(Self::wad()))
+                } else {
+                    rhs.0
+                        .checked_div(self.0)
+                        .and_then(|v| v.checked_mul(Self::wad()))
+                };
+
+                if let Some(u192) = u192 {
+                    Ok(Self(u192))
+                } else {
+                    Err(error!(DecimalError::MathOverflow))
+                }
+            }
+        }
     }
 }
 
@@ -298,6 +313,11 @@ mod test {
             Decimal::one().try_div(2u64).unwrap(),
             Decimal::one().try_div(2u128).unwrap(),
         );
+
+        assert_eq!(
+            Decimal::from(5u64).try_div(2u64).unwrap(),
+            Decimal::from_scaled_val(2500000000000000000)
+        );
     }
 
     #[test]
@@ -338,6 +358,25 @@ mod test {
                 100_000_000_000_000_000_000_000_000_000_000_000_000_u128
             ),
             a.try_mul(b).unwrap()
+        );
+    }
+
+    #[test]
+    fn it_divides_large_numbers() {
+        let a = Decimal::from(18_446_744_073_709_551_615_u64);
+        let b = Decimal::from(18_446_744_073_709_551_615_u64);
+        let c = Decimal::from(1_u64);
+        let d = Decimal::from(2_u64);
+
+        assert_eq!(
+            Decimal::from(
+                340_282_366_920_938_463_426_481_119_284_349_108_225_u128
+            ),
+            a.try_mul(b).expect("to mul").try_div(c).expect("to div")
+        );
+        assert_eq!(
+            Decimal::from(170141183460469231713240559642174554112u128),
+            a.try_mul(b).expect("to mul").try_div(d).expect("to div")
         );
     }
 
