@@ -66,14 +66,16 @@ impl Decimal {
     pub fn from_permillion(permillion: impl Into<u64>) -> Self {
         Self(U192::from(permillion.into() * consts::PERMILLION_SCALER))
     }
+}
 
+impl ScaledVal for Decimal {
     /// Return raw scaled value if it fits within u128
     #[allow(clippy::wrong_self_convention)]
-    pub fn to_scaled_val(&self) -> Result<u128> {
+    fn to_scaled_val(&self) -> Result<u128> {
         Ok(u128::try_from(self.0).map_err(|_| DecimalError::MathOverflow)?)
     }
 
-    pub fn from_scaled_val(scaled_val: u128) -> Self {
+    fn from_scaled_val(scaled_val: u128) -> Self {
         Self(U192::from(scaled_val))
     }
 }
@@ -106,22 +108,6 @@ impl TryRound<u64> for Decimal {
             .checked_div(Self::wad())
             .ok_or(DecimalError::MathOverflow)?;
         Ok(u64::try_from(ceil_val).map_err(|_| DecimalError::MathOverflow)?)
-    }
-}
-
-impl AlmostEq for Decimal {
-    /// The precision is 15 decimal places
-    fn almost_eq(&self, other: &Self) -> bool {
-        let precision = Self::from_scaled_val(1000);
-        match self.cmp(other) {
-            std::cmp::Ordering::Equal => true,
-            std::cmp::Ordering::Less => {
-                other.try_sub(*self).unwrap() < precision
-            }
-            std::cmp::Ordering::Greater => {
-                self.try_sub(*other).unwrap() < precision
-            }
-        }
     }
 }
 
@@ -163,13 +149,19 @@ impl TryAdd<Decimal> for Decimal {
     }
 }
 
-impl TrySub<Decimal> for Decimal {
-    fn try_sub(&self, rhs: Self) -> Result<Self> {
+impl TrySub<&Decimal> for Decimal {
+    fn try_sub(&self, rhs: &Self) -> Result<Self> {
         Ok(Self(
             self.0
                 .checked_sub(rhs.0)
                 .ok_or(DecimalError::MathOverflow)?,
         ))
+    }
+}
+
+impl TrySub<Decimal> for Decimal {
+    fn try_sub(&self, rhs: Self) -> Result<Self> {
+        self.try_sub(&rhs)
     }
 }
 
@@ -257,6 +249,8 @@ impl TryMul<Decimal> for Decimal {
         }
     }
 }
+
+impl AlmostEq for Decimal {}
 
 impl TrySqrt for Decimal {
     /// Approximate the square root using Newton's method.

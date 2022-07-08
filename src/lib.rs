@@ -88,8 +88,30 @@ impl<T: TryMul<T> + From<u64> + Clone> TryPow<u64> for T {
     }
 }
 
-pub trait AlmostEq {
-    fn almost_eq(&self, other: &Self) -> bool;
+pub trait ScaledVal {
+    fn to_scaled_val(&self) -> Result<u128>;
+    fn from_scaled_val(scaled_val: u128) -> Self;
+}
+
+pub trait AlmostEq: ScaledVal + TrySub<Self> + Ord + Clone {
+    /// If the difference between self and other is less than 10^(dec_places -
+    /// precision), return true.
+    ///
+    /// # Example
+    /// If we have 18 decimal places, than having precision of 6 would mean that
+    /// any difference beyond 12th dec place is considered as equal.
+    fn almost_eq(&self, other: &Self, precision: u32) -> bool {
+        let precision = Self::from_scaled_val(10u128.pow(precision));
+        match self.cmp(other) {
+            std::cmp::Ordering::Equal => true,
+            std::cmp::Ordering::Less => {
+                other.try_sub(self.clone()).unwrap() < precision
+            }
+            std::cmp::Ordering::Greater => {
+                self.try_sub(other.clone()).unwrap() < precision
+            }
+        }
+    }
 }
 
 pub trait TryRound<T> {
@@ -105,6 +127,7 @@ pub trait TryRound<T> {
 ///
 /// Based on https://docs.rs/spl-math/0.1.0/spl_math/precise_number/struct.PreciseNumber.html#method.sqrt
 fn newtonian_root_approximation<
+    'a,
     T: PartialEq
         + Clone
         + TryMul<T>
@@ -142,7 +165,10 @@ fn newtonian_root_approximation<
             Err(_) => T::from(0u64),
         };
         guess = first_term.try_add(second_term)?.try_div(root.clone())?;
-        if last_guess.almost_eq(&guess) {
+        // the source uses precision of 2 places, but we originally used 3
+        // places and want to keep the same precision as we tested our
+        // programs with
+        if last_guess.almost_eq(&guess, 3) {
             break;
         } else {
             last_guess = guess.clone();

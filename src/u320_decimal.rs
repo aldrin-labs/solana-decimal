@@ -11,10 +11,10 @@ use super::*;
 
 pub mod consts {
     /// Scale of precision.
-    pub const SCALE: usize = 6;
+    pub const SCALE: usize = 9;
 
     /// Identity
-    pub const IDENTITY: u64 = 1_000_000;
+    pub const IDENTITY: u64 = 1_000_000_000;
 
     pub const TWO_IDENTITIES: u64 = IDENTITY * 2;
 
@@ -47,14 +47,16 @@ impl LargeDecimal {
     fn half_identity() -> U320 {
         U320::from(consts::HALF_IDENTITY)
     }
+}
 
+impl ScaledVal for LargeDecimal {
     /// Return raw scaled value if it fits within u128
     #[allow(clippy::wrong_self_convention)]
-    pub fn to_scaled_val(&self) -> Result<u128> {
+    fn to_scaled_val(&self) -> Result<u128> {
         Ok(u128::try_from(self.0).map_err(|_| DecimalError::MathOverflow)?)
     }
 
-    pub fn from_scaled_val(scaled_val: u128) -> Self {
+    fn from_scaled_val(scaled_val: u128) -> Self {
         Self(U320::from(scaled_val))
     }
 }
@@ -87,22 +89,6 @@ impl TryRound<u64> for LargeDecimal {
             .checked_div(Self::identity())
             .ok_or(DecimalError::MathOverflow)?;
         Ok(u64::try_from(ceil_val).map_err(|_| DecimalError::MathOverflow)?)
-    }
-}
-
-impl AlmostEq for LargeDecimal {
-    /// The precision is 15 decimal places
-    fn almost_eq(&self, other: &Self) -> bool {
-        let precision = Self::from_scaled_val(1000);
-        match self.cmp(other) {
-            std::cmp::Ordering::Equal => true,
-            std::cmp::Ordering::Less => {
-                other.try_sub(self.clone()).unwrap() < precision
-            }
-            std::cmp::Ordering::Greater => {
-                self.try_sub(other.clone()).unwrap() < precision
-            }
-        }
     }
 }
 
@@ -263,6 +249,8 @@ impl TryMul<LargeDecimal> for LargeDecimal {
     }
 }
 
+impl AlmostEq for LargeDecimal {}
+
 impl TrySqrt for LargeDecimal {
     /// Approximate the square root using Newton's method.
     ///
@@ -360,11 +348,11 @@ mod test {
         let b = LargeDecimal::from(1000000007436580456u128);
 
         assert_eq!(
-            "408000006415494734520829188856568457112.000000",
+            "408000006415494734520829188856568457112.000000000",
             &a.try_mul(b.clone()).unwrap().to_string()
         );
-        assert_eq!("408.000000", &a.try_div(b.clone()).unwrap().to_string());
-        assert_eq!("0.002450", &b.try_div(a).unwrap().to_string());
+        assert_eq!("408.000000347", &a.try_div(b.clone()).unwrap().to_string());
+        assert_eq!("0.002450980", &b.try_div(a).unwrap().to_string());
     }
 
     #[test]
@@ -407,7 +395,7 @@ mod test {
         );
         assert_eq!(
             // 1.123456
-            LargeDecimal::from_scaled_val(1_123456),
+            LargeDecimal::from_scaled_val(1_123456111),
             // 1.123456111111111111
             Decimal::from_scaled_val(1_123456_111111111111).try_into()?,
         );
