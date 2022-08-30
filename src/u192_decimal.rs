@@ -187,19 +187,35 @@ impl TryDiv<u128> for Decimal {
 
 impl TryDiv<Decimal> for Decimal {
     fn try_div(&self, rhs: Self) -> Result<Self> {
+        // Both the numerator `self.0` and the denominator `rhs.0` are scaled up
+        // to 1E+18. Since we divide the numerator by the denominator we will
+        // have to rescale the value. Depending on when we rescale the
+        // calculation we run into lower risk of overflowing.
         match self.0.checked_mul(Self::wad()) {
+            // We first try scale the numerator a second time to offset the
+            // downscalling that occurs with the `checked_div`
             Some(v) => Ok(Self(
                 v.checked_div(rhs.0).ok_or(DecimalError::MathOverflow)?,
             )),
+            // If the numerator self.0 is bigger than 1E+39 = 1E+21 * 1E+18,
+            // then it will overflow when multiplied by 1E+18 and therefore
+            // `check_mul` will return None
             None => {
                 let u192 = if self.0 >= rhs.0 {
+                    // We divide numerator by denominator and
+                    // scale up the result
                     self.0
                         .checked_div(rhs.0)
                         .and_then(|v| v.checked_mul(Self::wad()))
                 } else {
-                    rhs.0
-                        .checked_div(self.0)
-                        .and_then(|v| v.checked_mul(Self::wad()))
+                    // We downscale the denominator and then divide the
+                    // scaled numerator by the unscaled denominator given
+                    // the result is then the scaled result as desired
+                    self.0.checked_div(
+                        rhs.0
+                            .checked_div(Self::wad())
+                            .ok_or(DecimalError::MathOverflow)?,
+                    )
                 };
 
                 if let Some(u192) = u192 {
@@ -301,6 +317,90 @@ mod test {
         assert_eq!(Decimal::one(), Decimal::one().try_pow(u64::MAX).unwrap());
     }
 
+    #[test]
+    fn test_checked_div_accross_parameter_space() -> Result<()> {
+        let num_list: Vec<u128> = vec![
+            1,                                                   // 10^1
+            10,                                                  // 10^2
+            100,                                                 // 10^2
+            1_000,                                               // 10^3
+            10_000,                                              // 10^4
+            100_000,                                             // 10^5
+            1_000_000,                                           // 10^6
+            10_000_000,                                          // 10^7
+            100_000_000,                                         // 10^8
+            1_000_000_000,                                       // 10^9
+            10_000_000_000,                                      // 10^11
+            100_000_000_000,                                     // 10^12
+            1_000_000_000_000,                                   // 10^13
+            10_000_000_000_000,                                  // 10^14
+            100_000_000_000_000,                                 // 10^15
+            1_000_000_000_000_000,                               // 10^16
+            10_000_000_000_000_000,                              // 10^17
+            100_000_000_000_000_000,                             // 10^18
+            1_000_000_000_000_000_000,                           // 10^19
+            10_000_000_000_000_000_000,                          // 10^20
+            100_000_000_000_000_000_000,                         // 10^21
+            1_000_000_000_000_000_000_000,                       // 10^22
+            10_000_000_000_000_000_000_000,                      // 10^23
+            100_000_000_000_000_000_000_000,                     // 10^24
+            1_000_000_000_000_000_000_000_000,                   // 10^25
+            10_000_000_000_000_000_000_000_000,                  // 10^26
+            100_000_000_000_000_000_000_000_000,                 // 10^27
+            1_000_000_000_000_000_000_000_000_000,               // 10^28
+            10_000_000_000_000_000_000_000_000_000,              // 10^29
+            100_000_000_000_000_000_000_000_000_000,             // 10^30
+            1_000_000_000_000_000_000_000_000_000_000,           // 10^31
+            10_000_000_000_000_000_000_000_000_000_000,          // 10^32
+            100_000_000_000_000_000_000_000_000_000_000,         // 10^33
+            1_000_000_000_000_000_000_000_000_000_000_000,       // 10^34
+            10_000_000_000_000_000_000_000_000_000_000_000,      // 10^35
+            100_000_000_000_000_000_000_000_000_000_000_000,     // 10^36
+            1_000_000_000_000_000_000_000_000_000_000_000_000,   // 10^37
+            10_000_000_000_000_000_000_000_000_000_000_000_000,  // 10^38
+            100_000_000_000_000_000_000_000_000_000_000_000_000, // 10^39
+        ];
+
+        let mut i = 0;
+        for a in num_list.clone() {
+            let a_dec = Decimal::from(a);
+
+            let mut j = 0;
+            for b in num_list.clone() {
+                let b_dec = Decimal::from(b);
+                let a_b = a_dec.try_div(b_dec)?;
+
+                let exponent: i32 = i - j;
+                let scaled_exponent = exponent + 18;
+
+                let expected = if scaled_exponent < 0 {
+                    // This is case where magnitude discrepancy between
+                    // numerator and denominator is such that result
+                    // aproximates to zero
+                    Decimal::zero()
+                } else if scaled_exponent <= 38 {
+                    // We use scaled exponent to calculate decimal from
+                    // scaled value to avoid having to using floating point
+                    // numbers
+                    Decimal::from_scaled_val(u128::pow(
+                        10,
+                        scaled_exponent as u32,
+                    ))
+                } else {
+                    // When the scaled exponent is above 38 we are better off
+                    // calculating the decimal from a u128 to avoid overflowing
+                    Decimal::from(u128::pow(10, exponent as u32))
+                };
+
+                assert_eq!(a_b, expected);
+
+                j += 1;
+            }
+            i += 1;
+        }
+
+        Ok(())
+    }
     #[test]
     fn test_checked_div() {
         assert_eq!(
