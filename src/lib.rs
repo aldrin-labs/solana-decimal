@@ -2,10 +2,18 @@
 #![allow(clippy::ptr_offset_with_cast)]
 #![allow(clippy::manual_range_contains)]
 
+#[cfg(all(feature = "anchor", feature = "anyhow_error"))]
+compile_error!(
+    "features `crate/anchor` and `crate/anyhow_error` are mutually exclusive"
+);
+
 pub mod f64;
 pub mod u192_decimal;
 
+#[cfg(feature = "anchor")]
 use anchor_lang::prelude::*;
+#[cfg(feature = "anyhow_error")]
+pub use anyhow::Result;
 use std::fmt;
 pub use u192_decimal::Decimal;
 
@@ -20,7 +28,8 @@ mod custom_u192 {
 
 pub use custom_u192::U192;
 
-#[error_code]
+#[cfg_attr(feature = "anchor", error_code)]
+#[cfg_attr(feature = "anyhow_error", derive(thiserror::Error, Debug))]
 #[derive(PartialEq, Eq)]
 pub enum DecimalError {
     MathOverflow,
@@ -140,7 +149,7 @@ fn newtonian_root_approximation<
         return Ok(zero);
     }
     if root == zero {
-        return Err(error!(DecimalError::MathOverflow));
+        return Err(yield_error());
     }
     let one = T::from(1u64);
     let root_minus_one = root.try_sub(one)?;
@@ -166,4 +175,21 @@ fn newtonian_root_approximation<
     }
 
     Ok(guess)
+}
+
+#[cfg(feature = "anyhow_error")]
+impl fmt::Display for DecimalError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "decimal crate math error ({:?})", self)
+    }
+}
+
+#[cfg(feature = "anyhow_error")]
+fn yield_error() -> anyhow::Error {
+    DecimalError::MathOverflow.into()
+}
+
+#[cfg(feature = "anchor")]
+fn yield_error() -> anchor_lang::prelude::Error {
+    DecimalError::MathOverflow.into()
 }

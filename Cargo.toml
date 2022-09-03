@@ -1,17 +1,15 @@
 [package]
 name = "decimal"
-version = "0.9.0"
+version = "0.10.0"
 edition = "2021"
 
 [features]
-serde = ["serde_crate", "serde_json"]
+anchor = ["anchor-lang"]
+anyhow_error = ["anyhow", "thiserror"]
+default = ["anyhow_error"]
 
 [dependencies]
-anchor-lang = "0.24.2"
-serde_json = { version = "1.0", optional = true }
+anchor-lang = { version = "0.24.2", optional = true }
 uint = "0.9"
-
-[dependencies.serde_crate]
-package = "serde"
-version = "1.0"
-optional = true
+anyhow = { version = "1.0", optional = true }
+thiserror = { version = "1.0", optional = true }
