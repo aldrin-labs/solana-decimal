@@ -2,6 +2,7 @@
 #![allow(clippy::ptr_offset_with_cast)]
 #![allow(clippy::manual_range_contains)]
 
+pub mod f64;
 pub mod u192_decimal;
 
 use anchor_lang::prelude::*;
