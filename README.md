@@ -1,4 +1,15 @@
+# Error
+
+There are two kinds of errors supported by this crate. The default one is
+[`anyhow::Error`](https://docs.rs/anyhow/latest/anyhow/). If you use this crate
+on Solana, you can include the dependency with:
+
+```
+solana-decimal = { default-features = false, features = ["anchor"] }
+```
+
 # `u192`
+
 For decimal representation we use `u192` type which consists of 3 `u64`
 integers. That is, `u192` is an unsigned integer of 24 bytes. A unit
 representing one is a [wad][wiki-significand] and its value is $`10^{18}`$.
@@ -50,4 +61,5 @@ function u192ToBN(u192: U192 | BN[] | { u192: U192 | BN[] }): BN {
 ```
 
 <!-- References -->
+
 [wiki-significand]: https://en.wikipedia.org/wiki/Significand

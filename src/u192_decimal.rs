@@ -221,7 +221,7 @@ impl TryDiv<Decimal> for Decimal {
                 if let Some(u192) = u192 {
                     Ok(Self(u192))
                 } else {
-                    Err(error!(DecimalError::MathOverflow))
+                    Err(yield_error())
                 }
             }
         }
@@ -259,7 +259,7 @@ impl TryMul<Decimal> for Decimal {
                 if let Some(u192) = u192 {
                     Ok(Self(u192))
                 } else {
-                    Err(error!(DecimalError::MathOverflow))
+                    Err(yield_error())
                 }
             }
         }
