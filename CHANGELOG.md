@@ -11,4 +11,4 @@ Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to
 ### Removed
 
 - `LargeDecimal` which was a u320 decimal type. This level of precision was not
-  necessary and is computationally costly.
+  necessary and is computationally costly. Use u192 instead.
