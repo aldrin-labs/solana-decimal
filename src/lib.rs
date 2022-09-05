@@ -3,12 +3,10 @@
 #![allow(clippy::manual_range_contains)]
 
 pub mod u192_decimal;
-pub mod u320_decimal;
 
 use anchor_lang::prelude::*;
-use std::{convert::TryFrom, fmt};
+use std::fmt;
 pub use u192_decimal::Decimal;
-pub use u320_decimal::LargeDecimal;
 
 mod custom_u192 {
     use uint::construct_uint;
@@ -19,16 +17,7 @@ mod custom_u192 {
     }
 }
 
-mod custom_u320 {
-    use uint::construct_uint;
-
-    construct_uint! {
-        pub struct U320(5);
-    }
-}
-
 pub use custom_u192::U192;
-pub use custom_u320::U320;
 
 #[error_code]
 #[derive(PartialEq, Eq)]
