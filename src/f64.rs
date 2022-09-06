@@ -79,23 +79,50 @@ impl TryPow<i32> for f64 {
 
 impl TryRound<u64> for f64 {
     fn try_floor(&self) -> Result<u64> {
-        try_cast(*self, |f| f.floor())
+        try_cast_u64(*self, |f| f.floor())
     }
 
     fn try_ceil(&self) -> Result<u64> {
-        try_cast(*self, |f| f.ceil())
+        try_cast_u64(*self, |f| f.ceil())
     }
 
     fn try_round(&self) -> Result<u64> {
-        try_cast(*self, |f| f.round())
+        try_cast_u64(*self, |f| f.round())
     }
 }
 
-fn try_cast(f: f64, transform: impl Fn(f64) -> f64) -> Result<u64> {
+impl TryRound<u128> for f64 {
+    fn try_floor(&self) -> Result<u128> {
+        try_cast_u128(*self, |f| f.floor())
+    }
+
+    fn try_ceil(&self) -> Result<u128> {
+        try_cast_u128(*self, |f| f.ceil())
+    }
+
+    fn try_round(&self) -> Result<u128> {
+        try_cast_u128(*self, |f| f.round())
+    }
+}
+
+fn try_cast_u64(f: f64, transform: impl Fn(f64) -> f64) -> Result<u64> {
     if f.is_sign_positive() && f.is_finite() {
         let f_prime = transform(f);
         if f_prime <= u64::MAX as f64 {
             Ok(f_prime as u64)
+        } else {
+            Err(DecimalError::MathOverflow.into())
+        }
+    } else {
+        Err(DecimalError::MathOverflow.into())
+    }
+}
+
+fn try_cast_u128(f: f64, transform: impl Fn(f64) -> f64) -> Result<u128> {
+    if f.is_sign_positive() && f.is_finite() {
+        let f_prime = transform(f);
+        if f_prime <= u128::MAX as f64 {
+            Ok(f_prime as u128)
         } else {
             Err(DecimalError::MathOverflow.into())
         }
@@ -273,12 +300,12 @@ mod tests {
     }
 
     #[test]
-    fn it_works_try_cast() {
+    fn it_works_try_cast_u64() {
         let x = 1_000_000.01f64;
 
         let transform = |f: f64| f.floor();
 
-        let x = try_cast(x, transform).unwrap();
+        let x = try_cast_u64(x, transform).unwrap();
         assert_eq!(x, 1_000_000u64);
     }
 
@@ -288,7 +315,7 @@ mod tests {
 
         let transform = |f: f64| f.floor();
 
-        assert!(try_cast(x, transform)
+        assert!(try_cast_u64(x, transform)
             .unwrap_err()
             .to_string()
             .contains("MathOverflow"));
@@ -299,99 +326,153 @@ mod tests {
         let x = f64::MAX as f64;
         let transform = |f: f64| f.floor();
 
-        assert!(try_cast(x, transform)
+        assert!(try_cast_u64(x, transform)
             .unwrap_err()
             .to_string()
             .contains("MathOverflow"));
     }
 
     #[test]
-    fn it_works_try_floor() {
+    fn it_works_try_floor_u64() {
         let x = 1_000_000.4f64;
-        assert_eq!(x.try_floor().unwrap(), 1_000_000u64);
+        assert_eq!(1_000_000u64, x.try_floor().unwrap());
 
         let x = 1_000_000.9f64;
-        assert_eq!(x.try_floor().unwrap(), 1_000_000u64);
+        assert_eq!(1_000_000u64, x.try_floor().unwrap());
     }
 
     #[test]
-    fn it_works_try_ceil() {
+    fn it_works_try_ceil_u64() {
         let x = 1_000_000.9f64;
-        assert_eq!(x.try_ceil().unwrap(), 1_000_001u64);
+        assert_eq!(1_000_001u64, x.try_ceil().unwrap());
 
         let x = 1_000_000.1f64;
-        assert_eq!(x.try_ceil().unwrap(), 1_000_001u64);
+        assert_eq!(1_000_001u64, x.try_ceil().unwrap());
     }
 
     #[test]
-    fn it_works_try_round() {
+    fn it_works_try_round_u64() {
         let x = 1_000_000.9f64;
-        assert_eq!(x.try_round().unwrap(), 1_000_001u64);
+        assert_eq!(1_000_001u64, x.try_round().unwrap());
 
         let x = 1_000_000.1f64;
-        assert_eq!(x.try_round().unwrap(), 1_000_000u64);
+        assert_eq!(1_000_000u64, x.try_round().unwrap());
 
         let x = 1_000_000.5f64;
-        assert_eq!(x.try_round().unwrap(), 1_000_001u64);
+        assert_eq!(1_000_001u64, x.try_round().unwrap());
     }
 
     #[test]
-    fn it_fails_try_floor_on_negative_values() {
+    fn it_fails_try_floor_on_negative_values_u64() {
         let x = -1_000_000.4f64;
-        assert!(x
-            .try_floor()
-            .unwrap_err()
-            .to_string()
-            .contains("MathOverflow"));
+        let res: Result<u64> = x.try_floor();
+        assert!(res.unwrap_err().to_string().contains("MathOverflow"));
     }
 
     #[test]
-    fn it_fails_try_ceil_on_negative_values() {
+    fn it_fails_try_ceil_on_negative_values_u64() {
         let x = -1_000_000.4f64;
-        assert!(x
-            .try_ceil()
-            .unwrap_err()
-            .to_string()
-            .contains("MathOverflow"));
+        let res: Result<u64> = x.try_ceil();
+        assert!(res.unwrap_err().to_string().contains("MathOverflow"));
     }
 
     #[test]
-    fn it_fails_try_round_on_negative_values() {
+    fn it_fails_try_round_on_negative_values_u64() {
         let x = -1_000_000.4f64;
-        assert!(x
-            .try_round()
-            .unwrap_err()
-            .to_string()
-            .contains("MathOverflow"));
+        let res: Result<u64> = x.try_round();
+        assert!(res.unwrap_err().to_string().contains("MathOverflow"));
     }
 
     #[test]
-    fn it_fails_try_floor_on_infinity() {
+    fn it_fails_try_floor_on_infinity_u64() {
         let x = f64::INFINITY;
-        assert!(x
-            .try_floor()
-            .unwrap_err()
-            .to_string()
-            .contains("MathOverflow"));
+        let res: Result<u64> = x.try_floor();
+        assert!(res.unwrap_err().to_string().contains("MathOverflow"));
     }
 
     #[test]
-    fn it_fails_try_ceil_on_infinity() {
+    fn it_fails_try_ceil_on_infinity_u64() {
         let x = f64::INFINITY;
-        assert!(x
-            .try_ceil()
-            .unwrap_err()
-            .to_string()
-            .contains("MathOverflow"));
+        let res: Result<u64> = x.try_ceil();
+        assert!(res.unwrap_err().to_string().contains("MathOverflow"));
     }
 
     #[test]
-    fn it_fails_try_round_on_infinity() {
+    fn it_fails_try_round_on_infinity_u64() {
         let x = f64::INFINITY;
-        assert!(x
-            .try_round()
-            .unwrap_err()
-            .to_string()
-            .contains("MathOverflow"));
+        let res: Result<u64> = x.try_round();
+        assert!(res.unwrap_err().to_string().contains("MathOverflow"));
+    }
+
+    #[test]
+    fn it_works_try_floor_u128() {
+        let x = 1_000_000.4f64;
+        assert_eq!(1_000_000u128, x.try_floor().unwrap());
+
+        let x = 1_000_000.9f64;
+        assert_eq!(1_000_000u128, x.try_floor().unwrap());
+    }
+
+    #[test]
+    fn it_works_try_ceil_u128() {
+        let x = 1_000_000.9f64;
+        assert_eq!(1_000_001u128, x.try_ceil().unwrap());
+
+        let x = 1_000_000.1f64;
+        assert_eq!(1_000_001u128, x.try_ceil().unwrap());
+    }
+
+    #[test]
+    fn it_works_try_round_u128() {
+        let x = 1_000_000.9f64;
+        assert_eq!(1_000_001u128, x.try_round().unwrap());
+
+        let x = 1_000_000.1f64;
+        assert_eq!(1_000_000u128, x.try_round().unwrap());
+
+        let x = 1_000_000.5f64;
+        assert_eq!(1_000_001u128, x.try_round().unwrap());
+    }
+
+    #[test]
+    fn it_fails_try_floor_on_negative_values_u128() {
+        let x = -1_000_000.4f64;
+        let res: Result<u128> = x.try_floor();
+        assert!(res.unwrap_err().to_string().contains("MathOverflow"));
+    }
+
+    #[test]
+    fn it_fails_try_ceil_on_negative_values_u128() {
+        let x = -1_000_000.4f64;
+        let res: Result<u128> = x.try_ceil();
+        assert!(res.unwrap_err().to_string().contains("MathOverflow"));
+    }
+
+    #[test]
+    fn it_fails_try_round_on_negative_values_u128() {
+        let x = -1_000_000.4f64;
+        let res: Result<u128> = x.try_round();
+        assert!(res.unwrap_err().to_string().contains("MathOverflow"));
+    }
+
+    #[test]
+    fn it_fails_try_floor_on_infinity_u128() {
+        let x = f64::INFINITY;
+        let res: Result<u128> = x.try_floor();
+        assert!(res.unwrap_err().to_string().contains("MathOverflow"));
+    }
+
+    #[test]
+    fn it_fails_try_ceil_on_infinity_u128() {
+        let x = f64::INFINITY;
+        let res: Result<u128> = x.try_ceil();
+        assert!(res.unwrap_err().to_string().contains("MathOverflow"));
+    }
+
+    #[test]
+    fn it_fails_try_round_on_infinity_u128() {
+        let x = f64::INFINITY;
+        let res: Result<u128> = x.try_round();
+        assert!(res.unwrap_err().to_string().contains("MathOverflow"));
     }
 }
