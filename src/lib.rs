@@ -60,6 +60,10 @@ pub trait TryPow<RHS>: Sized {
     fn try_pow(&self, rhs: RHS) -> Result<Self>;
 }
 
+pub trait TryLn: Sized {
+    fn try_ln(&self) -> Result<Self>;
+}
+
 impl<T: TryMul<T> + From<u64> + Clone> TryPow<u64> for T {
     /// Calculates base^exp
     fn try_pow(&self, mut exp: u64) -> Result<Self> {

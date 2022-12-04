@@ -111,6 +111,81 @@ impl TryRound<u64> for Decimal {
     }
 }
 
+impl TryRound<u128> for Decimal {
+    fn try_round(&self) -> Result<u128> {
+        let rounded_val = Self::half_wad()
+            .checked_add(self.0)
+            .ok_or(DecimalError::MathOverflow)?
+            .checked_div(Self::wad())
+            .ok_or(DecimalError::MathOverflow)?;
+        Ok(u128::try_from(rounded_val)
+            .map_err(|_| DecimalError::MathOverflow)?)
+    }
+
+    fn try_ceil(&self) -> Result<u128> {
+        let ceil_val = Self::wad()
+            .checked_sub(U192::from(1u128))
+            .ok_or(DecimalError::MathOverflow)?
+            .checked_add(self.0)
+            .ok_or(DecimalError::MathOverflow)?
+            .checked_div(Self::wad())
+            .ok_or(DecimalError::MathOverflow)?;
+        Ok(u128::try_from(ceil_val).map_err(|_| DecimalError::MathOverflow)?)
+    }
+
+    fn try_floor(&self) -> Result<u128> {
+        let ceil_val = self
+            .0
+            .checked_div(Self::wad())
+            .ok_or(DecimalError::MathOverflow)?;
+        Ok(u128::try_from(ceil_val).map_err(|_| DecimalError::MathOverflow)?)
+    }
+}
+
+// impl TryLn for Decimal {
+//     fn try_ln(&self) -> Result<Self> {
+//         let zero = Self::zero();
+
+//         if self == &zero {
+//             return Err(DecimalError::MathOverflow.into());
+//         }
+
+//         let one = Self::one();
+
+//         if self == &one {
+//             return Ok(Self::zero());
+//         }
+
+//         // Approximate using Taylor Series
+//         let mut x = *self;
+//         let mut count = 0;
+//         while &x >= &one {
+//             x *= Decimal::E_INVERSE;
+//             count += 1;
+//         }
+//         while x <= Decimal::E_INVERSE {
+//             x *= Decimal::E;
+//             count -= 1;
+//         }
+//         x = x.try_sub(&one)?;
+//         if &x == &zero {
+//             return Ok(Decimal::new(count, 0));
+//         }
+//         let mut result = Decimal::zero();
+//         let mut iteration = 0;
+//         let mut y = Decimal::one();
+//         let mut last = Decimal::one();
+//         while last != result && iteration < 100 {
+//             iteration += 1;
+//             last = result;
+//             y *= -x;
+//             y = y.try_sub();
+//             result += y / Decimal::new(iteration, 0);
+//         }
+//         Some(Decimal::new(count, 0) - result)
+//     }
+// }
+
 impl fmt::Display for Decimal {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut scaled_val = self.0.to_string();
@@ -381,6 +456,7 @@ mod test {
 
         Ok(())
     }
+
     #[test]
     fn test_checked_div() {
         assert_eq!(
@@ -408,7 +484,41 @@ mod test {
             Decimal::from_percent(200u64),
             Decimal::one().try_mul(2).unwrap()
         );
-        assert_eq!(Decimal::from_percent(90u64).try_floor().unwrap(), 0);
+        assert_eq!(
+            TryRound::<u64>::try_floor(&Decimal::from_percent(90u64)).unwrap(),
+            0
+        );
+    }
+
+    #[test]
+    fn test_try_round_u128() {
+        assert_eq!(
+            TryRound::<u128>::try_floor(&Decimal::from_percent(90u64)).unwrap(),
+            0
+        );
+        assert_eq!(
+            TryRound::<u128>::try_round(&Decimal::from_percent(90u64)).unwrap(),
+            1
+        );
+        assert_eq!(
+            TryRound::<u128>::try_ceil(&Decimal::from_percent(90u64)).unwrap(),
+            1
+        );
+
+        assert_eq!(
+            TryRound::<u128>::try_floor(&Decimal::from_percent(201u64))
+                .unwrap(),
+            2
+        );
+        assert_eq!(
+            TryRound::<u128>::try_round(&Decimal::from_percent(201u64))
+                .unwrap(),
+            2
+        );
+        assert_eq!(
+            TryRound::<u128>::try_ceil(&Decimal::from_percent(201u64)).unwrap(),
+            3
+        );
     }
 
     #[test]
