@@ -156,7 +156,7 @@ impl From<u128> for Decimal {
 
 impl From<Decimal> for u128 {
     fn from(val: Decimal) -> u128 {
-        val.0.as_u128()
+        val.0.div_mod(Decimal::wad()).0.as_u128()
     }
 }
 
@@ -553,5 +553,24 @@ mod test {
         );
 
         Ok(())
+    }
+
+    #[test]
+    fn as_u128() {
+        assert_eq!(u128::from(Decimal::zero()), 0_u128);
+        assert_eq!(u128::from(Decimal::one()), 1_u128);
+        assert_eq!(u128::from(Decimal::from(2u64)), 2_u128);
+        assert_eq!(
+            u128::from(Decimal::from(1_005_023_098_723_923_u64)),
+            1_005_023_098_723_923_u128
+        );
+        assert_eq!(
+            u128::from(Decimal::from_scaled_val(1_000_000_u128)),
+            0_u128
+        );
+        assert_eq!(
+            u128::from(Decimal::from_scaled_val(999_999_999_999_999_999)),
+            0_u128
+        );
     }
 }
