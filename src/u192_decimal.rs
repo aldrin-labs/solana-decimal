@@ -9,6 +9,8 @@
 //! support for arithmetic operations at the high end of u64 range.
 
 use super::*;
+use borsh::{BorshDeserialize, BorshSerialize};
+use serde::{Deserialize, Serialize};
 use std::convert::TryFrom;
 
 pub mod consts {
@@ -28,7 +30,20 @@ pub mod consts {
 }
 
 /// Large decimal values, precise to 18 digits
-#[derive(Clone, Copy, Debug, Default, PartialEq, PartialOrd, Eq, Ord)]
+#[derive(
+    BorshDeserialize,
+    BorshSerialize,
+    Serialize,
+    Deserialize,
+    Clone,
+    Copy,
+    Debug,
+    Default,
+    PartialEq,
+    PartialOrd,
+    Eq,
+    Ord,
+)]
 pub struct Decimal(pub U192);
 
 impl Decimal {
