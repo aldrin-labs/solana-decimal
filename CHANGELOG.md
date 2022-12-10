@@ -6,13 +6,16 @@ The format is based on [Keep a
 Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.10.1] - 20022-09-06
+## [0.10.2] - 2022-12-10
+
+- `Decimal` now has `TryRound<u128>` functionality.
+## [0.10.1] - 2022-09-06
 
 ### Added
 
 - `f64` can now be rounded, floored and ceiled to `u128`.
 
-## [0.10.0] - 20022-09-03
+## [0.10.0] - 2022-09-03
 
 ### Added
 
@@ -24,13 +27,13 @@ Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to
 - Anchor's error implementation is no longer default feature but must be enabled
   with feature flag `anchor` and by turning off default features.
 
-## [0.9.0] - 20022-09-03
+## [0.9.0] - 2022-09-03
 
 ### Added
 
 - Implementation of the exported math traits for `f64` scalar type.
 
-## [0.8.0] - 20022-09-03
+## [0.8.0] - 2022-09-03
 
 ### Removed
 
