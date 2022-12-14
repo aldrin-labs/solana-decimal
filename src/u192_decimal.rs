@@ -154,12 +154,6 @@ impl From<u128> for Decimal {
     }
 }
 
-impl From<Decimal> for u128 {
-    fn from(val: Decimal) -> u128 {
-        val.0.div_mod(Decimal::wad()).0.as_u128()
-    }
-}
-
 impl TryAdd<Decimal> for Decimal {
     fn try_add(&self, rhs: Self) -> Result<Self> {
         Ok(Self(
