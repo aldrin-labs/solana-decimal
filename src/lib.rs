@@ -129,7 +129,6 @@ pub trait TryRound<T> {
 ///
 /// Based on https://docs.rs/spl-math/0.1.0/spl_math/precise_number/struct.PreciseNumber.html#method.sqrt
 fn newtonian_root_approximation<
-    'a,
     T: PartialEq
         + Clone
         + TryMul<T>
