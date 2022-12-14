@@ -18,10 +18,13 @@ use std::fmt;
 pub use u192_decimal::Decimal;
 
 mod custom_u192 {
+    use borsh::{BorshDeserialize, BorshSerialize};
+    use serde::{Deserialize, Serialize};
     use uint::construct_uint;
 
     // U192 with 192 bits consisting of 3 x 64-bit words
     construct_uint! {
+        #[derive(BorshDeserialize, BorshSerialize, Deserialize, Serialize)]
         pub struct U192(3);
     }
 }
@@ -126,7 +129,6 @@ pub trait TryRound<T> {
 ///
 /// Based on https://docs.rs/spl-math/0.1.0/spl_math/precise_number/struct.PreciseNumber.html#method.sqrt
 fn newtonian_root_approximation<
-    'a,
     T: PartialEq
         + Clone
         + TryMul<T>
