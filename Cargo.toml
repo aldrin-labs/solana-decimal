@@ -1,6 +1,6 @@
 [package]
 name = "decimal"
-version = "0.10.4"
+version = "0.10.5"
 edition = "2021"
 
 [features]
@@ -9,9 +9,9 @@ anyhow_error = ["anyhow", "thiserror"]
 default = ["anyhow_error"]
 
 [dependencies]
-borsh = "0.9.3"
+borsh = "0.9"
 anchor-lang = { version = "0.24.2", optional = true }
 anyhow = { version = "1.0", optional = true }
-serde = { version = "1.0.149", features = ["derive"] }
+serde = { version = "1.0", features = ["derive"] }
 thiserror = { version = "1.0", optional = true }
 uint = "0.9"
