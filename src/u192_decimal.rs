@@ -154,6 +154,18 @@ impl From<u128> for Decimal {
     }
 }
 
+impl TryFrom<f64> for Decimal {
+    type Error = anyhow::Error;
+
+    fn try_from(val: f64) -> Result<Self, Self::Error> {
+        let int = val as u128;
+        let decimal = val.try_sub(int as f64)?;
+        Self(Self::wad() * U192::from(int)).try_add(Decimal::from_scaled_val(
+            ((1_000_000_000_000_000_000_f64) * decimal) as u128,
+        ))
+    }
+}
+
 impl TryAdd<Decimal> for Decimal {
     fn try_add(&self, rhs: Self) -> Result<Self> {
         Ok(Self(
