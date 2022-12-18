@@ -348,7 +348,6 @@ impl Decimal {
     const INVERSE_ONE_BASE_POINT: u128 = 9_999_000_099_990_001_00;
 
     fn log(self) -> Result<Self> {
-        println!("FLAG: firstttttt");
         if self == Decimal::zero() {
             bail!("Logarithm of zero is not well defined")
         }
@@ -376,9 +375,6 @@ impl Decimal {
             is_inf = true;
         }
 
-        println!("FLAG: HERREEEEEE count = {}", count);
-        println!("FLAG: HEREEEEEEE x = {}", x);
-
         if x == Self::zero() {
             return Ok(Decimal::from(count));
         }
@@ -388,7 +384,6 @@ impl Decimal {
         let mut last = Decimal::one();
 
         while last != result && iteration < 100 {
-            println!("FLAG: ajsdiofajsdofiajsdfoaisjdfapdjfa = {}", result);
             iteration += 1;
             last = result;
             y = y.try_mul(x)?;
@@ -405,12 +400,6 @@ impl Decimal {
             .try_div(Decimal::from_scaled_val(Self::LOG_ONE_BASE_POINT))?;
 
         if is_inf {
-            println!(
-                "FLAG: toma = {}",
-                Self::from(count).try_sub(result.try_div(
-                    Decimal::from_scaled_val(Self::LOG_ONE_BASE_POINT)
-                )?)?
-            );
             return Self::from(count).try_sub(result);
         }
 
@@ -865,12 +854,7 @@ mod test {
             Decimal::from_scaled_val(72_085_927_489_123_890_746)
                 .log()
                 .unwrap(),
-            Decimal::from_scaled_val(1)
+            Decimal::from_scaled_val(42780727349056391056960)
         )
-    }
-
-    #[test]
-    fn print_log() {
-        println!("{}", Decimal::from_scaled_val(Decimal::LOG_ONE_BASE_POINT));
     }
 }
