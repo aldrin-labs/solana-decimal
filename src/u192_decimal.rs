@@ -9,6 +9,7 @@
 //! support for arithmetic operations at the high end of u64 range.
 
 use super::*;
+use anyhow::bail;
 use borsh::{BorshDeserialize, BorshSerialize};
 use serde::{Deserialize, Serialize};
 use std::convert::TryFrom;
@@ -338,6 +339,82 @@ impl TryRound<u128> for Decimal {
             .checked_div(Self::wad())
             .ok_or(DecimalError::MathOverflow)?;
         Ok(u128::try_from(ceil_val).map_err(|_| DecimalError::MathOverflow)?)
+    }
+}
+
+impl Decimal {
+    const LOG_ONE_BASE_POINT: u128 = 9_999_500_033_330_8;
+    const ONE_BASE_POINT: u128 = 1_000_100_000_000_000_000;
+    const INVERSE_ONE_BASE_POINT: u128 = 9_999_000_099_990_001_00;
+
+    fn log(self) -> Result<Self> {
+        println!("FLAG: firstttttt");
+        if self == Decimal::zero() {
+            bail!("Logarithm of zero is not well defined")
+        }
+
+        // Approximate using Taylor Series
+        let mut x = self.clone();
+        let mut count: u64 = 0;
+        while x >= Self::one() {
+            x =
+                x.try_mul(Self::from_scaled_val(Self::INVERSE_ONE_BASE_POINT))?;
+            count += 1;
+        }
+        while x <= Self::from_scaled_val(Self::INVERSE_ONE_BASE_POINT) {
+            x = x.try_mul(Self::from_scaled_val(Self::ONE_BASE_POINT))?;
+            count = count.checked_sub(1).ok_or(anyhow::anyhow!(
+                "Invalid logarithm count calculation"
+            ))?;
+        }
+
+        let mut is_inf = false;
+        if x >= Decimal::one() {
+            x = x.try_sub(Decimal::one())?;
+        } else {
+            x = Decimal::one().try_sub(x)?;
+            is_inf = true;
+        }
+
+        println!("FLAG: HERREEEEEE count = {}", count);
+        println!("FLAG: HEREEEEEEE x = {}", x);
+
+        if x == Self::zero() {
+            return Ok(Decimal::from(count));
+        }
+        let mut result = Decimal::zero();
+        let mut iteration = 0;
+        let mut y = Decimal::one();
+        let mut last = Decimal::one();
+
+        while last != result && iteration < 100 {
+            println!("FLAG: ajsdiofajsdofiajsdfoaisjdfapdjfa = {}", result);
+            iteration += 1;
+            last = result;
+            y = y.try_mul(x)?;
+            if iteration % 2 == 0 {
+                result = result
+                    .try_sub(y.try_div(Decimal::from(iteration as u64))?)?;
+            } else {
+                result = result
+                    .try_add(y.try_div(Decimal::from(iteration as u64))?)?;
+            }
+        }
+
+        result = result
+            .try_div(Decimal::from_scaled_val(Self::LOG_ONE_BASE_POINT))?;
+
+        if is_inf {
+            println!(
+                "FLAG: toma = {}",
+                Self::from(count).try_sub(result.try_div(
+                    Decimal::from_scaled_val(Self::LOG_ONE_BASE_POINT)
+                )?)?
+            );
+            return Self::from(count).try_sub(result);
+        }
+
+        Self::from(count).try_add(result)
     }
 }
 
@@ -737,5 +814,63 @@ mod test {
             .unwrap(),
             1_000_049_923_712_734_897_u128
         )
+    }
+
+    #[test]
+    fn test_log() {
+        assert_eq!(
+            Decimal::from_scaled_val(Decimal::ONE_BASE_POINT)
+                .log()
+                .unwrap(),
+            Decimal::one()
+        );
+        assert!(Decimal::zero().log().is_err());
+        assert_eq!(
+            Decimal::from(2_u64).log().unwrap(),
+            Decimal::from_scaled_val(6931818376712368013349)
+        );
+        assert_eq!(
+            Decimal::from(3_u64).log().unwrap(),
+            Decimal::from_scaled_val(10986672194416218913181)
+        );
+        assert_eq!(
+            Decimal::from(4_u64).log().unwrap(),
+            Decimal::from_scaled_val(13863636760021702513033)
+        );
+        assert_eq!(
+            Decimal::from(5_u64).log().unwrap(),
+            Decimal::from_scaled_val(16095183896490469651769)
+        );
+        assert_eq!(
+            Decimal::from(6_u64).log().unwrap(),
+            Decimal::from_scaled_val(17918490583035130544025)
+        );
+        assert_eq!(
+            Decimal::from(7_u64).log().unwrap(),
+            Decimal::from_scaled_val(19460074515068393554994)
+        );
+        assert_eq!(
+            Decimal::from(8_u64).log().unwrap(),
+            Decimal::from_scaled_val(20795455149927637440752)
+        );
+        assert_eq!(
+            Decimal::from(9_u64).log().unwrap(),
+            Decimal::from_scaled_val(21973344410321981711930)
+        );
+        assert_eq!(
+            Decimal::from(10_u64).log().unwrap(),
+            Decimal::from_scaled_val(23027002302844577153293)
+        );
+        assert_eq!(
+            Decimal::from_scaled_val(72_085_927_489_123_890_746)
+                .log()
+                .unwrap(),
+            Decimal::from_scaled_val(1)
+        )
+    }
+
+    #[test]
+    fn print_log() {
+        println!("{}", Decimal::from_scaled_val(Decimal::LOG_ONE_BASE_POINT));
     }
 }
