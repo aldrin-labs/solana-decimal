@@ -347,7 +347,7 @@ impl Decimal {
     const ONE_BASE_POINT: u128 = 1_000_100_000_000_000_000;
     const INVERSE_ONE_BASE_POINT: u128 = 9_999_000_099_990_001_00;
 
-    fn log(self) -> Result<Self> {
+    fn sqrt_one_basis_point_log(self) -> Result<Self> {
         if self == Decimal::zero() {
             bail!("Logarithm of zero is not well defined")
         }
@@ -376,7 +376,10 @@ impl Decimal {
         }
 
         if x == Self::zero() {
-            return Ok(Decimal::from(count));
+            // we want log_{sqrt(1.0001))(result) = 2 * log_(1.0001)(result)
+            return Ok(Decimal::from(count)
+                .try_mul(Decimal::from(2_u64))
+                .unwrap());
         }
         let mut result = Decimal::zero();
         let mut iteration = 0;
@@ -400,10 +403,16 @@ impl Decimal {
             .try_div(Decimal::from_scaled_val(Self::LOG_ONE_BASE_POINT))?;
 
         if is_inf {
-            return Self::from(count).try_sub(result);
+            // we want log_{sqrt(1.0001))(result) = 2 * log_(1.0001)(result)
+            return Self::from(count)
+                .try_sub(result)?
+                .try_mul(Decimal::from(2_u64));
         }
 
-        Self::from(count).try_add(result)
+        // we want log_{sqrt(1.0001))(result) = 2 * log_(1.0001)(result)
+        Self::from(count)
+            .try_add(result)?
+            .try_mul(Decimal::from(2_u64))
     }
 }
 
@@ -809,52 +818,81 @@ mod test {
     fn test_log() {
         assert_eq!(
             Decimal::from_scaled_val(Decimal::ONE_BASE_POINT)
-                .log()
+                .sqrt_one_basis_point_log()
                 .unwrap(),
-            Decimal::one()
+            Decimal::one().try_mul(Decimal::from(2_u64)).unwrap()
         );
-        assert!(Decimal::zero().log().is_err());
+        // TODO: it should be 1, but instead it gives 1.00004999500523390
         assert_eq!(
-            Decimal::from(2_u64).log().unwrap(),
+            Decimal::from_scaled_val(Decimal::ONE_BASE_POINT)
+                .try_sqrt()
+                .unwrap()
+                .sqrt_one_basis_point_log()
+                .unwrap(),
+            Decimal::from_scaled_val(1000049995000523390)
+        );
+        assert!(Decimal::zero().sqrt_one_basis_point_log().is_err());
+        assert_eq!(
+            Decimal::from(2_u64).sqrt_one_basis_point_log().unwrap(),
             Decimal::from_scaled_val(6931818376712368013349)
+                .try_mul(Decimal::from(2_u64))
+                .unwrap()
         );
         assert_eq!(
-            Decimal::from(3_u64).log().unwrap(),
+            Decimal::from(3_u64).sqrt_one_basis_point_log().unwrap(),
             Decimal::from_scaled_val(10986672194416218913181)
+                .try_mul(Decimal::from(2_u64))
+                .unwrap()
         );
         assert_eq!(
-            Decimal::from(4_u64).log().unwrap(),
+            Decimal::from(4_u64).sqrt_one_basis_point_log().unwrap(),
             Decimal::from_scaled_val(13863636760021702513033)
+                .try_mul(Decimal::from(2_u64))
+                .unwrap()
         );
         assert_eq!(
-            Decimal::from(5_u64).log().unwrap(),
+            Decimal::from(5_u64).sqrt_one_basis_point_log().unwrap(),
             Decimal::from_scaled_val(16095183896490469651769)
+                .try_mul(Decimal::from(2_u64))
+                .unwrap()
         );
         assert_eq!(
-            Decimal::from(6_u64).log().unwrap(),
+            Decimal::from(6_u64).sqrt_one_basis_point_log().unwrap(),
             Decimal::from_scaled_val(17918490583035130544025)
+                .try_mul(Decimal::from(2_u64))
+                .unwrap()
         );
         assert_eq!(
-            Decimal::from(7_u64).log().unwrap(),
+            Decimal::from(7_u64).sqrt_one_basis_point_log().unwrap(),
             Decimal::from_scaled_val(19460074515068393554994)
+                .try_mul(Decimal::from(2_u64))
+                .unwrap()
         );
         assert_eq!(
-            Decimal::from(8_u64).log().unwrap(),
+            Decimal::from(8_u64).sqrt_one_basis_point_log().unwrap(),
             Decimal::from_scaled_val(20795455149927637440752)
+                .try_mul(Decimal::from(2_u64))
+                .unwrap()
         );
         assert_eq!(
-            Decimal::from(9_u64).log().unwrap(),
+            Decimal::from(9_u64).sqrt_one_basis_point_log().unwrap(),
             Decimal::from_scaled_val(21973344410321981711930)
+                .try_mul(Decimal::from(2_u64))
+                .unwrap()
         );
         assert_eq!(
-            Decimal::from(10_u64).log().unwrap(),
+            Decimal::from(10_u64).sqrt_one_basis_point_log().unwrap(),
             Decimal::from_scaled_val(23027002302844577153293)
+                .try_mul(Decimal::from(2_u64))
+                .unwrap()
         );
         assert_eq!(
             Decimal::from_scaled_val(72_085_927_489_123_890_746)
-                .log()
+                .sqrt_one_basis_point_log()
                 .unwrap(),
             Decimal::from_scaled_val(42780727349056391056960)
+                .try_mul(Decimal::from(2_u64))
+                .unwrap()
         )
     }
 }
