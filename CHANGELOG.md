@@ -6,6 +6,10 @@ The format is based on [Keep a
 Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.10.6] 2022-12-19
+
+- Add logarithm implementation in base `sqrt(1.0001)`.
+
 ## [0.10.5] 2022-12-16
 
 - Don't specify the minor version of serde and borsh dependency.
