@@ -347,6 +347,8 @@ impl Decimal {
     const ONE_BASE_POINT: u128 = 1_000_100_000_000_000_000;
     const INVERSE_ONE_BASE_POINT: u128 = 9_999_000_099_990_001_00;
 
+    /// One basis point is 1.0001.
+    /// A basis point comes from uniswap v3 concentrated liquidity.
     fn sqrt_one_basis_point_log(self) -> Result<Self> {
         if self == Decimal::zero() {
             bail!("Logarithm of zero is not well defined")
