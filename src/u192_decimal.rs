@@ -349,7 +349,7 @@ impl Decimal {
 
     /// One basis point is 1.0001.
     /// A basis point comes from uniswap v3 concentrated liquidity.
-    fn sqrt_one_basis_point_log(self) -> Result<Self> {
+    pub fn sqrt_one_basis_point_log(self) -> Result<Self> {
         if self == Decimal::zero() {
             bail!("Logarithm of zero is not well defined")
         }
