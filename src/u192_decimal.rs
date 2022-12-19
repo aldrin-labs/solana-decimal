@@ -353,7 +353,7 @@ impl Decimal {
         }
 
         // Approximate using Taylor Series
-        let mut x = self.clone();
+        let mut x = self;
         let mut count: u64 = 0;
         while x >= Self::one() {
             x =
@@ -362,9 +362,9 @@ impl Decimal {
         }
         while x <= Self::from_scaled_val(Self::INVERSE_ONE_BASE_POINT) {
             x = x.try_mul(Self::from_scaled_val(Self::ONE_BASE_POINT))?;
-            count = count.checked_sub(1).ok_or(anyhow::anyhow!(
-                "Invalid logarithm count calculation"
-            ))?;
+            count = count.checked_sub(1).ok_or_else(|| {
+                anyhow::anyhow!("Invalid logarithm count calculation")
+            })?;
         }
 
         let mut is_inf = false;
