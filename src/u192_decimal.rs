@@ -349,7 +349,7 @@ impl Decimal {
 
     /// One basis point is 1.0001.
     /// A basis point comes from uniswap v3 concentrated liquidity.
-    pub fn sqrt_one_basis_point_log(self) -> Result<Self> {
+    pub fn log_of_sqrt_one_basis_point(self) -> Result<Self> {
         if self == Decimal::zero() {
             bail!("Logarithm of zero is not well defined")
         }
@@ -820,7 +820,7 @@ mod test {
     fn test_log() {
         assert_eq!(
             Decimal::from_scaled_val(Decimal::ONE_BASE_POINT)
-                .sqrt_one_basis_point_log()
+                .log_of_sqrt_one_basis_point()
                 .unwrap(),
             Decimal::one().try_mul(Decimal::from(2_u64)).unwrap()
         );
@@ -829,68 +829,68 @@ mod test {
             Decimal::from_scaled_val(Decimal::ONE_BASE_POINT)
                 .try_sqrt()
                 .unwrap()
-                .sqrt_one_basis_point_log()
+                .log_of_sqrt_one_basis_point()
                 .unwrap(),
             Decimal::from_scaled_val(1000049995000523390)
         );
-        assert!(Decimal::zero().sqrt_one_basis_point_log().is_err());
+        assert!(Decimal::zero().log_of_sqrt_one_basis_point().is_err());
         assert_eq!(
-            Decimal::from(2_u64).sqrt_one_basis_point_log().unwrap(),
+            Decimal::from(2_u64).log_of_sqrt_one_basis_point().unwrap(),
             Decimal::from_scaled_val(6931818376712368013349)
                 .try_mul(Decimal::from(2_u64))
                 .unwrap()
         );
         assert_eq!(
-            Decimal::from(3_u64).sqrt_one_basis_point_log().unwrap(),
+            Decimal::from(3_u64).log_of_sqrt_one_basis_point().unwrap(),
             Decimal::from_scaled_val(10986672194416218913181)
                 .try_mul(Decimal::from(2_u64))
                 .unwrap()
         );
         assert_eq!(
-            Decimal::from(4_u64).sqrt_one_basis_point_log().unwrap(),
+            Decimal::from(4_u64).log_of_sqrt_one_basis_point().unwrap(),
             Decimal::from_scaled_val(13863636760021702513033)
                 .try_mul(Decimal::from(2_u64))
                 .unwrap()
         );
         assert_eq!(
-            Decimal::from(5_u64).sqrt_one_basis_point_log().unwrap(),
+            Decimal::from(5_u64).log_of_sqrt_one_basis_point().unwrap(),
             Decimal::from_scaled_val(16095183896490469651769)
                 .try_mul(Decimal::from(2_u64))
                 .unwrap()
         );
         assert_eq!(
-            Decimal::from(6_u64).sqrt_one_basis_point_log().unwrap(),
+            Decimal::from(6_u64).log_of_sqrt_one_basis_point().unwrap(),
             Decimal::from_scaled_val(17918490583035130544025)
                 .try_mul(Decimal::from(2_u64))
                 .unwrap()
         );
         assert_eq!(
-            Decimal::from(7_u64).sqrt_one_basis_point_log().unwrap(),
+            Decimal::from(7_u64).log_of_sqrt_one_basis_point().unwrap(),
             Decimal::from_scaled_val(19460074515068393554994)
                 .try_mul(Decimal::from(2_u64))
                 .unwrap()
         );
         assert_eq!(
-            Decimal::from(8_u64).sqrt_one_basis_point_log().unwrap(),
+            Decimal::from(8_u64).log_of_sqrt_one_basis_point().unwrap(),
             Decimal::from_scaled_val(20795455149927637440752)
                 .try_mul(Decimal::from(2_u64))
                 .unwrap()
         );
         assert_eq!(
-            Decimal::from(9_u64).sqrt_one_basis_point_log().unwrap(),
+            Decimal::from(9_u64).log_of_sqrt_one_basis_point().unwrap(),
             Decimal::from_scaled_val(21973344410321981711930)
                 .try_mul(Decimal::from(2_u64))
                 .unwrap()
         );
         assert_eq!(
-            Decimal::from(10_u64).sqrt_one_basis_point_log().unwrap(),
+            Decimal::from(10_u64).log_of_sqrt_one_basis_point().unwrap(),
             Decimal::from_scaled_val(23027002302844577153293)
                 .try_mul(Decimal::from(2_u64))
                 .unwrap()
         );
         assert_eq!(
             Decimal::from_scaled_val(72_085_927_489_123_890_746)
-                .sqrt_one_basis_point_log()
+                .log_of_sqrt_one_basis_point()
                 .unwrap(),
             Decimal::from_scaled_val(42780727349056391056960)
                 .try_mul(Decimal::from(2_u64))
